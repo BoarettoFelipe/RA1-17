@@ -21,6 +21,70 @@ def lerArquivo(nomeArquivo):
         print(f"Erro na leitura: {e}")
         sys.exit(1)
 
+#Aqui iniciamos o Autômato Finito Determinístico
+def parseExpressao(linha):
+    tokens = []            # Lista que armazenará as palavras válidas
+    pos = 0
+    tamanho = len(linha)
+
+    def estado_inicial(p):
+        if p >= tamanho:
+            return None, p      #Rodamos o estado inicial até a linha chegar em seu último caractere
+
+        c = linha[p]    #itera sobre os caracter ao longo da linha
+        if c.isspace():
+            return estado_inicial(p + 1)   #se o caractere for um espaço, apenas vai ao próximo
+        elif c in '()+-*^%':
+            return c, p + 1                #se o caractere for algum operador, retorna o operador mais a posição do proximo caractere
+        elif c == '/':
+            return estado_divisao(p + 1)   #se o caractere for um operador de divisão, checamos se é divisão dupla ou simples
+        elif c.isdigit():
+            return estado_numero(p, p)     #se o caracte for um número, vamos a função para ver qual numero e seu tamanho
+        elif c.isalpha():
+            return estado_palavra(p, p)    #se o caracte for uma palavra, vamos a função para ver qual palavra e seu tamanho
+        else:
+            raise ValueError(f"Caractere inválido: '{c}'")    #Se não cair em nenhuma condição, o caractere é inválido e 'cancela' a linha
+
+    def estado_divisao(p):
+        if p < tamanho and linha[p] == '/':
+            return '//', p + 1
+        return '/', p
+
+    def estado_numero(p, inicio):
+        ponto = False          #aqui já tratamos o '.' dos numeros reais, definindo como verdadeiro caso encontremos na string
+        while p < tamanho:
+            c = linha[p]
+            if c.isdigit():
+                p += 1
+            elif c == '.' and not ponto:
+                ponto = True
+                p += 1
+            elif c == '.' and ponto:
+                raise ValueError(f"Número malformado: {linha[inicio:p + 1]}")    #Aqui o tratamento em si, caso haja mais de um ponto por exemplo
+            else:
+                break          #Se não for um '.' nem um número, simplesmente encerramos pois achamos algum caractere inválido
+        return linha[inicio:p], p
+
+    def estado_palavra(p, inicio):
+        while p < tamanho and linha[p].isalpha():
+            p += 1
+        token = linha[inicio:p].upper()        #Recortamos a string original da linha
+        if token not in ["RES", "MEM"]:        #Aqui acontece a verificação da string lida, se ela faz parte do nosso vocabulário de comandos especiais
+            raise ValueError(f"Comando desconhecido: '{token}'") #Se não faz parte do vocabulário, descartamos essa linha e avançamos para a próxima
+        return token, p
+
+    #Começamos aqui
+    while pos < tamanho:
+        try:
+            token, pos = estado_inicial(pos)   #Aqui guardamos a string (Ou o token) e a posição que o programa parou de ler ele
+            if token is not None:
+                tokens.append(token)  #Avançamos para a leitura do próximo token, com sua nova posição
+        except ValueError as e:
+            print(f"Erro Léxico -> {e}")
+            return None   #Aqui invalidamos e descartamos a linha que não encanxou em nenhum estado de nossa máquina, seja por qualquer tipo de erro
+
+    return tokens
+
 
 if __name__ == "__main__":
     #Se o tamanho da lista digita no terminal pelo usuário for diferente de 2, tratamos o erro e indicamos como utilizar de forma correta
@@ -31,7 +95,18 @@ if __name__ == "__main__":
     nome_arquivo = sys.argv[1]
     linhas_lidas = lerArquivo(nome_arquivo)
 
-    for l in linhas_lidas:
-        print(l)
+    todos_tokens = []
+
+    for linha in linhas_lidas:
+        tokens = parseExpressao(linha)
+        if tokens:
+            print(f"Tokens: {tokens}")
+            todos_tokens.append(" ".join(tokens))
+
+        # Exporta tokens validos
+    with open("tokens.txt", "w", encoding="utf-8") as f:
+        for t in todos_tokens:
+            f.write(t + "\n")
+    print("\nArquivo tokens.txt gerado com sucesso.")
 
 
