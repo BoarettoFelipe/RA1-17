@@ -5,7 +5,7 @@
 | Campo | Detalhe |
 |-------|---------|
 | **Instituição** | PUCPR — Pontifícia Universidade Católica do Paraná |
-| **Disciplina** | Compiladores |
+| **Disciplina** | Construção de Interpretadores |
 | **Professor** | Frank Alcantara |
 | **Grupo Canvas** | RA1 17 |
 
