@@ -85,6 +85,70 @@ def parseExpressao(linha):
 
     return tokens
 
+#EXECUÇÃO E VALIDAÇÃO
+OPERADORES = {'+', '-', '*', '/', '//', '%', '^'}
+
+def eh_numero(token):
+    try:
+        float(token)
+        return True
+    except ValueError:
+        return False
+
+def eh_variavel(token):
+    return token.isalpha() and token == token.upper() and token != 'RES'
+
+def aplicar_operacao(a, b, operador):
+    if operador == '+': return a + b
+    elif operador == '-': return a - b
+    elif operador == '*': return a * b
+    elif operador == '/': return a / b
+    elif operador == '//': return float(int(a) // int(b))
+    elif operador == '%': return float(int(a) % int(b))
+    elif operador == '^': return a ** int(b)
+    else: raise ValueError(f"Operador desconhecido: {operador}")
+
+def executarExpressao(tokens, memoria, historico):
+    pilha = []
+    for token in tokens:
+        if token == '(' or token == ')':
+            continue
+        elif eh_numero(token):
+            pilha.append(float(token))
+        elif token in OPERADORES:
+            if len(pilha) < 2:
+                raise ValueError(f"Operandos insuficientes para '{token}'")
+            b = pilha.pop()
+            a = pilha.pop()
+            resultado = aplicar_operacao(a, b, token)
+            pilha.append(resultado)
+        elif token == 'RES':
+            if len(pilha) == 0:
+                raise ValueError("RES precisa de N na pilha")
+            n = int(pilha.pop())
+            if n < 0 or n >= len(historico):
+                raise ValueError(f"RES: índice {n} fora do histórico")
+            valor = historico[len(historico) - 1 - n]
+            pilha.append(valor)
+        elif eh_variavel(token):
+            if len(pilha) > 0:
+                valor = pilha.pop()
+                memoria[token] = valor
+                pilha.append(valor)
+            else:
+                pilha.append(memoria.get(token, 0.0))
+        else:
+            raise ValueError(f"Token desconhecido: '{token}'")
+
+    if len(pilha) != 1:
+        raise ValueError(f"Expressão mal formada. Pilha final: {pilha}")
+    return pilha[0]
+
+def exibirResultados(resultados):
+    print("\n===== RESULTADOS =====")
+    for i, r in enumerate(resultados):
+        print(f"  Linha {i}: {r:.1f}")
+    print("======================\n")
 
 if __name__ == "__main__":
     #Se o tamanho da lista digita no terminal pelo usuário for diferente de 2, tratamos o erro e indicamos como utilizar de forma correta
@@ -109,4 +173,26 @@ if __name__ == "__main__":
             f.write(t + "\n")
     print("\nArquivo tokens.txt gerado com sucesso.")
 
+    # VALIDAÇÃO E EXIBIÇÃO
+    memoria = {}
+    historico = []
 
+    with open("tokens.txt", "r", encoding="utf-8") as f:
+        linhas_tokens = [linha.strip() for linha in f if linha.strip()]
+
+    for i, linha in enumerate(linhas_tokens):
+        tokens = linha.split()
+        try:
+            resultado = executarExpressao(tokens, memoria, historico)
+            historico.append(resultado)
+            print(f"  Linha {i}: {tokens}  →  {resultado:.4f}")
+        except ValueError as e:
+            print(f"  Linha {i}: ERRO → {e}")
+            historico.append(0.0)
+
+    exibirResultados(historico)
+
+    if memoria:
+        print("MEMÓRIA FINAL:")
+        for nome, valor in memoria.items():
+            print(f"  {nome} = {valor:.4f}")
